@@ -2,5 +2,7 @@
   "name": "Viper Pulse: Arcade Snake",
   "description": "A modern HTML5 canvas arcade Snake game featuring dynamic grid obstacles, multi-tier food items, score-burning overdrive boost, particle explosions, and synthesized Web Audio sound effects.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
