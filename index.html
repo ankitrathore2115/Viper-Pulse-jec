@@ -1,0 +1,1952 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Viper Pulse: Arcade Snake</title>
+    <meta name="description" content="A modern HTML5 canvas arcade Snake game featuring dynamic grid obstacles, multi-tier food items, score-burning overdrive boost, particle explosions, and synthesized Web Audio sound effects." />
+    <meta property="og:title" content="Viper Pulse: Arcade Snake" />
+    <meta property="og:description" content="A modern HTML5 canvas arcade Snake game featuring dynamic grid obstacles, multi-tier food items, score-burning overdrive boost, particle explosions, and synthesized Web Audio sound effects." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg-canvas: #080c14;
+        --bg-arena: #0c121e;
+        --bg-surface: #121a2b;
+        --bg-surface-elevated: rgba(18, 26, 43, 0.92);
+        --border-hairline: rgba(148, 163, 184, 0.14);
+        --border-bright: rgba(52, 211, 153, 0.35);
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        --accent-emerald: #10b981;
+        --accent-emerald-glow: #34d399;
+        --accent-gold: #f59e0b;
+        --accent-gold-bright: #fbbf24;
+        --accent-cyan: #38bdf8;
+        --accent-danger: #f43f5e;
+        --font-display: 'Syne', system-ui, -apple-system, sans-serif;
+        --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        --font-mono: 'JetBrains Mono', monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      html, body {
+        width: 100%;
+        height: 100%;
+        background-color: var(--bg-canvas);
+        color: var(--text-primary);
+        font-family: var(--font-body);
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .app-shell {
+        display: flex;
+        flex-direction: column;
+        width: 100vw;
+        height: 100vh;
+        max-width: 1440px;
+        margin: 0 auto;
+        position: relative;
+      }
+
+      /* Top Bar Contract: Zone 1 (Brand) - Zone 2 (Clean Unboxed Telemetry / Links) - Zone 3 (Primary Actions) */
+      .top-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 60px;
+        padding: 0 24px;
+        border-bottom: 1px solid var(--border-hairline);
+        background: rgba(8, 12, 20, 0.88);
+        backdrop-filter: blur(12px);
+        flex-shrink: 0;
+        z-index: 20;
+      }
+
+      .brand-title {
+        font-family: var(--font-display);
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        color: var(--text-primary);
+        text-decoration: none;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+
+      .hud-strip {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+      }
+
+      .hud-metric {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+
+      .hud-label {
+        color: var(--text-muted);
+        font-weight: 500;
+        font-size: 0.8rem;
+      }
+
+      .hud-value {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.95rem;
+        transition: color 150ms cubic-bezier(0.16, 1, 0.3, 1), transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .hud-value.highlight-gold {
+        color: var(--accent-gold-bright);
+      }
+
+      .hud-value.highlight-emerald {
+        color: var(--accent-emerald-glow);
+      }
+
+      .hud-value.highlight-cyan {
+        color: var(--accent-cyan);
+      }
+
+      .hud-sep {
+        color: var(--text-muted);
+        opacity: 0.45;
+      }
+
+      .top-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+      }
+
+      .btn-control {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-family: var(--font-body);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: 8px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        transition: transform 150ms cubic-bezier(0.16, 1, 0.3, 1), opacity 150ms cubic-bezier(0.16, 1, 0.3, 1), border-color 150ms ease, background-color 150ms ease;
+      }
+
+      .btn-control:hover {
+        border-color: rgba(148, 163, 184, 0.35);
+        background: #192338;
+      }
+
+      .btn-control:active {
+        transform: scale(0.97);
+      }
+
+      .btn-control:focus-visible {
+        outline: 2px solid var(--accent-emerald-glow);
+        outline-offset: 2px;
+      }
+
+      .btn-primary {
+        background: var(--accent-emerald);
+        color: #04130d;
+        border-color: transparent;
+        font-weight: 700;
+        padding: 12px 26px;
+        font-size: 0.95rem;
+        border-radius: 10px;
+      }
+
+      .btn-primary:hover {
+        background: var(--accent-emerald-glow);
+        border-color: transparent;
+      }
+
+      /* Main Arena Workspace */
+      .arena-stage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 24px;
+        gap: 28px;
+        min-height: 0;
+        position: relative;
+      }
+
+      .canvas-frame {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-arena);
+        border: 1px solid var(--border-hairline);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+        overflow: hidden;
+        transition: border-color 180ms ease;
+      }
+
+      .canvas-frame.boost-active {
+        border-color: rgba(245, 158, 11, 0.65);
+      }
+
+      .canvas-frame.slow-active {
+        border-color: rgba(56, 189, 248, 0.65);
+      }
+
+      canvas#gameCanvas {
+        display: block;
+      }
+
+      /* Side Telemetry & Legend Rail on Desktop */
+      .side-rail {
+        width: 270px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        flex-shrink: 0;
+      }
+
+      .rail-section {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: 12px;
+        padding: 18px;
+      }
+
+      .rail-heading {
+        font-family: var(--font-display);
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 12px;
+        letter-spacing: -0.01em;
+      }
+
+      .legend-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 0.8125rem;
+        line-height: 1.45;
+      }
+
+      .legend-swatch {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        margin-top: 3px;
+        flex-shrink: 0;
+      }
+
+      .swatch-normal {
+        background: var(--accent-emerald-glow);
+        box-shadow: 0 0 8px var(--accent-emerald);
+        border-radius: 50%;
+      }
+
+      .swatch-golden {
+        background: var(--accent-gold-bright);
+        box-shadow: 0 0 10px var(--accent-gold);
+        transform: rotate(45deg);
+      }
+
+      .swatch-slow {
+        background: var(--accent-cyan);
+        box-shadow: 0 0 8px var(--accent-cyan);
+        border-radius: 4px;
+      }
+
+      .swatch-obstacle {
+        background: #334155;
+        border: 1.5px solid #94a3b8;
+      }
+
+      .legend-title {
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      .legend-desc {
+        color: var(--text-secondary);
+        font-size: 0.775rem;
+      }
+
+      .status-banner {
+        margin-top: 4px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-hairline);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.8rem;
+      }
+
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .status-key {
+        color: var(--text-secondary);
+      }
+
+      .status-val {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+
+      /* Overlay Modals (Start, Pause, Game Over) */
+      .overlay-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(8, 12, 20, 0.84);
+        backdrop-filter: blur(8px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 15;
+        opacity: 1;
+        transition: opacity 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .overlay-backdrop.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .overlay-card {
+        width: 100%;
+        max-width: 430px;
+        background: var(--bg-surface-elevated);
+        border: 1px solid var(--border-hairline);
+        border-radius: 16px;
+        padding: 28px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        text-align: left;
+      }
+
+      .overlay-kicker {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent-emerald-glow);
+        letter-spacing: 0.02em;
+      }
+
+      .overlay-kicker.danger {
+        color: var(--accent-danger);
+      }
+
+      .overlay-kicker.amber {
+        color: var(--accent-gold-bright);
+      }
+
+      .overlay-title {
+        font-family: var(--font-display);
+        font-size: 1.85rem;
+        font-weight: 800;
+        line-height: 1.15;
+        color: var(--text-primary);
+        text-wrap: balance;
+        margin-top: 4px;
+      }
+
+      .overlay-subtitle {
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: var(--text-secondary);
+      }
+
+      /* Segmented Difficulty Selector */
+      .segmented-group {
+        display: flex;
+        background: var(--bg-canvas);
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid var(--border-hairline);
+        gap: 4px;
+      }
+
+      .seg-btn {
+        flex: 1;
+        padding: 8px 12px;
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        border-radius: 7px;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: background-color 150ms ease, color 150ms ease;
+      }
+
+      .seg-btn:hover {
+        color: var(--text-primary);
+      }
+
+      .seg-btn.active {
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+      }
+
+      .stats-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        padding: 14px 0;
+        border-top: 1px solid var(--border-hairline);
+        border-bottom: 1px solid var(--border-hairline);
+      }
+
+      .stat-cell {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .stat-cell-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+      }
+
+      .stat-cell-val {
+        font-family: var(--font-mono);
+        font-variant-numeric: tabular-nums;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .overlay-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .overlay-actions .btn-primary {
+        flex: 1;
+      }
+
+      /* Mobile / Touch Controls Bar */
+      .touch-controls {
+        display: none;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 460px;
+        padding: 8px 16px 14px;
+        gap: 16px;
+      }
+
+      .dpad-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 48px);
+        grid-template-rows: repeat(2, 44px);
+        gap: 6px;
+      }
+
+      .touch-btn {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-hairline);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .touch-btn:active {
+        background: #1e293b;
+        border-color: var(--accent-emerald-glow);
+      }
+
+      .touch-boost-btn {
+        flex: 1;
+        height: 94px;
+        background: rgba(245, 158, 11, 0.14);
+        border: 1px solid rgba(245, 158, 11, 0.4);
+        border-radius: 10px;
+        color: var(--accent-gold-bright);
+        font-family: var(--font-display);
+        font-weight: 700;
+        font-size: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      .touch-boost-btn:active, .touch-boost-btn.active {
+        background: rgba(245, 158, 11, 0.28);
+        border-color: var(--accent-gold-bright);
+      }
+
+      @media (max-width: 980px) {
+        .side-rail {
+          display: none;
+        }
+        .arena-stage {
+          flex-direction: column;
+          padding: 12px;
+          gap: 10px;
+        }
+        .touch-controls {
+          display: flex;
+        }
+        .hud-strip .hide-mobile {
+          display: none;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .top-bar {
+          padding: 0 14px;
+          height: 54px;
+        }
+        .brand-title {
+          font-size: 1.05rem;
+        }
+        .hud-strip {
+          gap: 8px;
+          font-size: 0.78rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Top Bar Contract: Zone 1 (Brand) · Zone 2 (Unboxed Telemetry) · Zone 3 (Actions) -->
+      <header class="top-bar">
+        <a href="#top" class="brand-title" id="brandLink">Viper Pulse</a>
+
+        <div class="hud-strip" role="status" aria-live="polite">
+          <div class="hud-metric">
+            <span class="hud-label">Score</span>
+            <span class="hud-value" id="hudScore">0</span>
+          </div>
+          <span class="hud-sep" aria-hidden="true">·</span>
+          <div class="hud-metric">
+            <span class="hud-label">High Score</span>
+            <span class="hud-value highlight-gold" id="hudHighScore">0</span>
+          </div>
+          <span class="hud-sep hide-mobile" aria-hidden="true">·</span>
+          <div class="hud-metric hide-mobile">
+            <span class="hud-label">Obstacles</span>
+            <span class="hud-value" id="hudObstacles">0</span>
+          </div>
+          <span class="hud-sep hide-mobile" aria-hidden="true">·</span>
+          <div class="hud-metric hide-mobile">
+            <span class="hud-label">Pace</span>
+            <span class="hud-value highlight-emerald" id="hudSpeedState">1.0x Normal</span>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <button type="button" class="btn-control" id="audioToggleBtn" aria-label="Toggle Synthesized Audio">
+            <span id="audioLabel">Audio: On</span>
+          </button>
+          <button type="button" class="btn-control" id="pauseBtn" aria-label="Pause Game (Shortcut P)">
+            <span id="pauseBtnText">Pause (P)</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Centered Game Stage -->
+      <main class="arena-stage">
+        <div class="canvas-frame" id="canvasFrame">
+          <canvas id="gameCanvas" width="640" height="640" aria-label="Snake Game Grid Canvas"></canvas>
+
+          <!-- START MENU OVERLAY -->
+          <div class="overlay-backdrop" id="startOverlay" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+            <div class="overlay-card">
+              <div>
+                <div class="overlay-kicker">Arcade Grid Survival</div>
+                <h1 class="overlay-title" id="startTitle">Viper Pulse</h1>
+                <p class="overlay-subtitle" style="margin-top: 8px;">
+                  Navigate the dynamic neon grid, harvest high-value targets, and burn score reserves for temporary overdrive speed.
+                </p>
+              </div>
+
+              <div>
+                <div class="stat-cell-label" style="margin-bottom: 8px; font-weight: 600;">Select Grid Pace</div>
+                <div class="segmented-group" role="group" aria-label="Difficulty Pace">
+                  <button type="button" class="seg-btn" data-speed="zen">Zen (0.8x)</button>
+                  <button type="button" class="seg-btn active" data-speed="arcade">Arcade (1.0x)</button>
+                  <button type="button" class="seg-btn" data-speed="overclock">Fast (1.3x)</button>
+                </div>
+              </div>
+
+              <div class="stats-summary">
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Personal Best</span>
+                  <span class="stat-cell-val" id="startBestScore">0</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Controls</span>
+                  <span class="stat-cell-val" style="font-size: 0.9rem; font-weight: 600; margin-top: 4px;">WASD / Arrows · Space</span>
+                </div>
+              </div>
+
+              <div class="overlay-actions">
+                <button type="button" class="btn-control btn-primary" id="startGameBtn">
+                  Start Game (Enter)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PAUSE OVERLAY -->
+          <div class="overlay-backdrop hidden" id="pauseOverlay" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+            <div class="overlay-card">
+              <div>
+                <div class="overlay-kicker amber">Simulation Suspended</div>
+                <h2 class="overlay-title" id="pauseTitle">Game Paused</h2>
+                <p class="overlay-subtitle" style="margin-top: 6px;">
+                  Press <strong>P</strong> or click Resume to return to the active grid.
+                </p>
+              </div>
+
+              <div class="stats-summary">
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Current Score</span>
+                  <span class="stat-cell-val" id="pauseCurrentScore">0</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Active Obstacles</span>
+                  <span class="stat-cell-val" id="pauseObstacles">0</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Snake Length</span>
+                  <span class="stat-cell-val" id="pauseLength">3</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">High Score</span>
+                  <span class="stat-cell-val" id="pauseHighScore">0</span>
+                </div>
+              </div>
+
+              <div class="overlay-actions">
+                <button type="button" class="btn-control btn-primary" id="resumeGameBtn">
+                  Resume (P)
+                </button>
+                <button type="button" class="btn-control" id="restartFromPauseBtn">
+                  Restart
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- GAME OVER OVERLAY -->
+          <div class="overlay-backdrop hidden" id="gameOverOverlay" role="dialog" aria-modal="true" aria-labelledby="gameOverTitle">
+            <div class="overlay-card">
+              <div>
+                <div class="overlay-kicker danger" id="gameOverReason">Hull Breach Detected</div>
+                <h2 class="overlay-title" id="gameOverTitle">Game Over</h2>
+                <p class="overlay-subtitle" id="gameOverSubtext" style="margin-top: 6px;">
+                  Your run ended on the grid. Review your telemetry below.
+                </p>
+              </div>
+
+              <div class="stats-summary">
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Final Score</span>
+                  <span class="stat-cell-val" id="finalScoreVal">0</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">High Score</span>
+                  <span class="stat-cell-val" id="finalHighScoreVal" style="color: var(--accent-gold-bright);">0</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Food Harvested</span>
+                  <span class="stat-cell-val" id="finalFoodCount">0</span>
+                </div>
+                <div class="stat-cell">
+                  <span class="stat-cell-label">Wall Tiles Spawned</span>
+                  <span class="stat-cell-val" id="finalObstacleCount">0</span>
+                </div>
+              </div>
+
+              <div class="overlay-actions">
+                <button type="button" class="btn-control btn-primary" id="playAgainBtn">
+                  Play Again (Enter)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Side Rail: Field Guide & Live Telemetry -->
+        <aside class="side-rail" aria-label="Game Mechanics and Telemetry">
+          <div class="rail-section">
+            <h2 class="rail-heading">Grid Targets & Mechanics</h2>
+            <div class="legend-list">
+              <div class="legend-item">
+                <span class="legend-swatch swatch-normal" aria-hidden="true"></span>
+                <div>
+                  <div class="legend-title">Normal Dot · +10 pts</div>
+                  <div class="legend-desc">Core energy node. Extends hull by 1 segment.</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="legend-swatch swatch-golden" aria-hidden="true"></span>
+                <div>
+                  <div class="legend-title">Golden Apple · +30 pts</div>
+                  <div class="legend-desc">High-yield core. Grants +30 bonus points on capture.</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="legend-swatch swatch-slow" aria-hidden="true"></span>
+                <div>
+                  <div class="legend-title">Slow-Motion Berry · +15 pts</div>
+                  <div class="legend-desc">Cryo node. Temporarily slows snake speed by 35% for 6s.</div>
+                </div>
+              </div>
+              <div class="legend-item">
+                <span class="legend-swatch swatch-obstacle" aria-hidden="true"></span>
+                <div>
+                  <div class="legend-title">Dynamic Wall Obstacles</div>
+                  <div class="legend-desc">Randomly materialize across the grid as your score climbs.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rail-section">
+            <h2 class="rail-heading">Controls & Overdrive</h2>
+            <div class="legend-desc" style="line-height: 1.55;">
+              Steer with <strong>Arrow Keys</strong> or <strong>WASD</strong>. Hold <strong>Spacebar</strong> to engage Speed Boost (1.85x pace), burning <strong>1 score point</strong> per boosted step. Press <strong>P</strong> anytime to pause.
+            </div>
+            <div class="status-banner">
+              <div class="status-row">
+                <span class="status-key">Snake Length</span>
+                <span class="status-val" id="railLength">3</span>
+              </div>
+              <div class="status-row">
+                <span class="status-key">Boost Burned</span>
+                <span class="status-val" id="railBoostBurned">0 pts</span>
+              </div>
+              <div class="status-row">
+                <span class="status-key">Slow-Mo Timer</span>
+                <span class="status-val" id="railSlowTimer">Inactive</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Mobile / Touch Controls -->
+        <div class="touch-controls" aria-label="Touch Controls">
+          <div class="dpad-grid">
+            <div></div>
+            <button type="button" class="touch-btn" data-dir="UP" aria-label="Turn Up">▲</button>
+            <div></div>
+            <button type="button" class="touch-btn" data-dir="LEFT" aria-label="Turn Left">◀</button>
+            <button type="button" class="touch-btn" data-dir="DOWN" aria-label="Turn Down">▼</button>
+            <button type="button" class="touch-btn" data-dir="RIGHT" aria-label="Turn Right">▶</button>
+          </div>
+          <button type="button" class="touch-boost-btn" id="touchBoostBtn" aria-label="Hold to Speed Boost">
+            <span>HOLD BOOST</span>
+            <span style="font-size: 0.72rem; font-family: var(--font-mono); opacity: 0.8;">-1 PT / STEP</span>
+          </button>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        'use strict';
+
+        // ==========================================
+        // 1. WEB AUDIO API SYNTHESIZER
+        // ==========================================
+        class SoundSynth {
+          constructor() {
+            this.ctx = null;
+            this.enabled = true;
+            this.lastBoostSoundTime = 0;
+          }
+
+          init() {
+            if (!this.ctx) {
+              const AudioCtx = window.AudioContext || window.webkitAudioContext;
+              if (AudioCtx) {
+                this.ctx = new AudioCtx();
+              }
+            }
+            if (this.ctx && this.ctx.state === 'suspended') {
+              this.ctx.resume().catch(() => {});
+            }
+          }
+
+          toggle() {
+            this.enabled = !this.enabled;
+            if (this.enabled) {
+              this.init();
+              this.playTone(523.25, 659.25, 0.09, 'sine', 0.12);
+            }
+            return this.enabled;
+          }
+
+          playTone(startFreq, endFreq, duration, type = 'sine', gainVal = 0.15, delay = 0) {
+            if (!this.enabled) return;
+            this.init();
+            if (!this.ctx) return;
+
+            const now = this.ctx.currentTime + delay;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = type;
+            osc.frequency.setValueAtTime(startFreq, now);
+            if (endFreq !== startFreq) {
+              osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+            }
+
+            gain.gain.setValueAtTime(0.0001, now);
+            gain.gain.linearRampToValueAtTime(gainVal, now + 0.012);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + duration + 0.02);
+          }
+
+          playEatNormal() {
+            // Crisp dual-note arcade pickup (+10 pts)
+            this.playTone(523.25, 659.25, 0.08, 'triangle', 0.16, 0);
+            this.playTone(659.25, 880.0, 0.11, 'sine', 0.14, 0.055);
+          }
+
+          playEatGolden() {
+            // Radiant 3-note fanfare chord (+30 pts)
+            this.playTone(587.33, 587.33, 0.09, 'triangle', 0.18, 0);
+            this.playTone(783.99, 783.99, 0.1, 'triangle', 0.18, 0.06);
+            this.playTone(1174.66, 1318.5, 0.22, 'sine', 0.2, 0.12);
+          }
+
+          playEatSlowMo() {
+            // Cool descending cryo sweep
+            this.playTone(740.0, 370.0, 0.24, 'sine', 0.18, 0);
+            this.playTone(554.37, 277.18, 0.26, 'triangle', 0.12, 0.04);
+          }
+
+          playBoostStep() {
+            if (!this.enabled) return;
+            const nowMs = performance.now();
+            if (nowMs - this.lastBoostSoundTime < 65) return;
+            this.lastBoostSoundTime = nowMs;
+            // Subtle high-tech thruster pulse
+            this.playTone(150, 260, 0.055, 'sawtooth', 0.06, 0);
+          }
+
+          playObstacleSpawn() {
+            this.playTone(220, 165, 0.1, 'square', 0.05, 0);
+          }
+
+          playPause(isPaused) {
+            if (isPaused) {
+              this.playTone(440, 330, 0.1, 'sine', 0.1, 0);
+            } else {
+              this.playTone(330, 493.88, 0.1, 'sine', 0.1, 0);
+            }
+          }
+
+          playCrash() {
+            // Multi-layered low impact + descending sawtooth
+            this.playTone(180, 38, 0.38, 'sawtooth', 0.24, 0);
+            this.playTone(110, 28, 0.45, 'square', 0.18, 0.03);
+            this.playTone(95, 22, 0.5, 'triangle', 0.22, 0.06);
+          }
+        }
+
+        const sound = new SoundSynth();
+
+        // ==========================================
+        // 2. CONSTANTS & CONFIGURATION
+        // ==========================================
+        const GRID_SIZE = 24; // 24x24 tactical grid
+        const STORAGE_KEY = 'viper_pulse_high_score_v1';
+
+        const PACE_PRESETS = {
+          zen: { multiplier: 0.8, baseInterval: 145 },
+          arcade: { multiplier: 1.0, baseInterval: 115 },
+          overclock: { multiplier: 1.3, baseInterval: 88 }
+        };
+
+        const FOOD_TYPES = {
+          NORMAL: {
+            id: 'NORMAL',
+            label: '+10',
+            points: 10,
+            color: '#10b981',
+            bright: '#34d399',
+            growth: 1
+          },
+          GOLDEN: {
+            id: 'GOLDEN',
+            label: '+30 GOLDEN',
+            points: 30,
+            color: '#f59e0b',
+            bright: '#fbbf24',
+            growth: 2
+          },
+          SLOW: {
+            id: 'SLOW',
+            label: 'SLOW-MO +15',
+            points: 15,
+            color: '#0284c7',
+            bright: '#38bdf8',
+            growth: 1,
+            slowDurationMs: 6000
+          }
+        };
+
+        // ==========================================
+        // 3. DOM ELEMENTS
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const canvasFrame = document.getElementById('canvasFrame');
+
+        const hudScore = document.getElementById('hudScore');
+        const hudHighScore = document.getElementById('hudHighScore');
+        const hudObstacles = document.getElementById('hudObstacles');
+        const hudSpeedState = document.getElementById('hudSpeedState');
+
+        const railLength = document.getElementById('railLength');
+        const railBoostBurned = document.getElementById('railBoostBurned');
+        const railSlowTimer = document.getElementById('railSlowTimer');
+
+        const startOverlay = document.getElementById('startOverlay');
+        const pauseOverlay = document.getElementById('pauseOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+
+        const startBestScore = document.getElementById('startBestScore');
+        const pauseCurrentScore = document.getElementById('pauseCurrentScore');
+        const pauseObstacles = document.getElementById('pauseObstacles');
+        const pauseLength = document.getElementById('pauseLength');
+        const pauseHighScore = document.getElementById('pauseHighScore');
+
+        const gameOverReason = document.getElementById('gameOverReason');
+        const gameOverSubtext = document.getElementById('gameOverSubtext');
+        const finalScoreVal = document.getElementById('finalScoreVal');
+        const finalHighScoreVal = document.getElementById('finalHighScoreVal');
+        const finalFoodCount = document.getElementById('finalFoodCount');
+        const finalObstacleCount = document.getElementById('finalObstacleCount');
+
+        const startGameBtn = document.getElementById('startGameBtn');
+        const resumeGameBtn = document.getElementById('resumeGameBtn');
+        const restartFromPauseBtn = document.getElementById('restartFromPauseBtn');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const pauseBtnText = document.getElementById('pauseBtnText');
+        const audioToggleBtn = document.getElementById('audioToggleBtn');
+        const audioLabel = document.getElementById('audioLabel');
+        const touchBoostBtn = document.getElementById('touchBoostBtn');
+        const brandLink = document.getElementById('brandLink');
+
+        // ==========================================
+        // 4. GAME STATE VARIABLES
+        // ==========================================
+        let gameState = 'TITLE_MENU'; // 'TITLE_MENU' | 'PLAYING' | 'PAUSED' | 'GAME_OVER'
+        let selectedPace = 'arcade';
+
+        let score = 0;
+        let highScore = loadHighScore();
+        let foodsHarvested = 0;
+        let boostPointsBurned = 0;
+
+        let snake = [];
+        let prevSnake = []; // For smooth sub-frame interpolation
+        let direction = { x: 1, y: 0 };
+        let inputQueue = [];
+        let pendingGrowth = 0;
+
+        let foods = []; // Supports simultaneous Normal Dot, Golden Apple, and Slow-Motion Berry
+        let obstacles = []; // Dynamic wall tiles [{ x, y, spawnTime }]
+        let particles = []; // Explosion particles
+        let shockwaves = []; // Expanding ring effects
+        let floatingTexts = []; // Score popups on canvas
+
+        let isBoosting = false;
+        let slowMoEndTime = 0;
+        let lastMoveTimestamp = 0;
+        let moveIntervalMs = PACE_PRESETS.arcade.baseInterval;
+        let screenShake = 0;
+
+        let cellSize = 26;
+        let canvasLogicalSize = 624;
+
+        // ==========================================
+        // 5. PERSISTENCE & RESPONSIVE SIZING
+        // ==========================================
+        function loadHighScore() {
+          try {
+            const raw = window.localStorage.getItem(STORAGE_KEY);
+            const parsed = parseInt(raw, 10);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+          } catch (e) {
+            return 0;
+          }
+        }
+
+        function saveHighScore(val) {
+          if (val > highScore) {
+            highScore = val;
+            try {
+              window.localStorage.setItem(STORAGE_KEY, String(highScore));
+            } catch (e) {
+              // Ignore storage quota errors in sandboxed iframes
+            }
+          }
+        }
+
+        function resizeCanvas() {
+          const stage = document.querySelector('.arena-stage');
+          if (!stage) return;
+          const rect = stage.getBoundingClientRect();
+          const isDesktop = window.innerWidth > 980;
+          const availW = isDesktop ? rect.width - 330 : rect.width - 24;
+          const availH = isDesktop ? rect.height - 32 : rect.height - 130;
+
+          const rawSize = Math.max(288, Math.min(availW, availH, 696));
+          // Snap to clean multiple of GRID_SIZE for razor-sharp grid lines
+          cellSize = Math.max(12, Math.floor(rawSize / GRID_SIZE));
+          canvasLogicalSize = cellSize * GRID_SIZE;
+
+          const dpr = window.devicePixelRatio || 1;
+          canvas.style.width = canvasLogicalSize + 'px';
+          canvas.style.height = canvasLogicalSize + 'px';
+          canvas.width = canvasLogicalSize * dpr;
+          canvas.height = canvasLogicalSize * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        // ==========================================
+        // 6. INITIALIZATION & SPAWNING LOGIC
+        // ==========================================
+        function initMatch() {
+          score = 0;
+          foodsHarvested = 0;
+          boostPointsBurned = 0;
+          pendingGrowth = 0;
+          isBoosting = false;
+          slowMoEndTime = 0;
+          screenShake = 0;
+
+          const startX = Math.floor(GRID_SIZE / 2) - 2;
+          const startY = Math.floor(GRID_SIZE / 2);
+          snake = [
+            { x: startX, y: startY },
+            { x: startX - 1, y: startY },
+            { x: startX - 2, y: startY }
+          ];
+          prevSnake = snake.map(seg => ({ ...seg }));
+          direction = { x: 1, y: 0 };
+          inputQueue = [];
+
+          obstacles = [];
+          foods = [];
+          particles = [];
+          shockwaves = [];
+          floatingTexts = [];
+
+          // Spawn initial dynamic obstacles (2 base obstacles, increasing as score rises)
+          syncDynamicObstacles(true);
+
+          // Spawn all 3 food archetypes so Normal, Golden Apple, and Slow-Mo Berry are active
+          spawnFoodOfType(FOOD_TYPES.NORMAL);
+          spawnFoodOfType(FOOD_TYPES.GOLDEN);
+          spawnFoodOfType(FOOD_TYPES.SLOW);
+
+          lastMoveTimestamp = performance.now();
+          updateHUD();
+        }
+
+        function isCellOccupied(x, y, safeFrontRadius = 0) {
+          // Check snake segments
+          for (let i = 0; i < snake.length; i++) {
+            if (snake[i].x === x && snake[i].y === y) return true;
+          }
+          // Check safety zone around snake head so obstacles never trap immediately
+          if (safeFrontRadius > 0 && snake.length > 0) {
+            const head = snake[0];
+            const dist = Math.abs(head.x - x) + Math.abs(head.y - y);
+            if (dist <= safeFrontRadius) return true;
+            // Also keep the line directly ahead of snake clear
+            for (let step = 1; step <= safeFrontRadius + 2; step++) {
+              if (head.x + direction.x * step === x && head.y + direction.y * step === y) {
+                return true;
+              }
+            }
+          }
+          // Check obstacles
+          for (let i = 0; i < obstacles.length; i++) {
+            if (obstacles[i].x === x && obstacles[i].y === y) return true;
+          }
+          // Check foods
+          for (let i = 0; i < foods.length; i++) {
+            if (foods[i].x === x && foods[i].y === y) return true;
+          }
+          return false;
+        }
+
+        function findFreeCell(safeFrontRadius = 0, avoidBorders = false) {
+          const candidates = [];
+          const minCoord = avoidBorders ? 2 : 0;
+          const maxCoord = avoidBorders ? GRID_SIZE - 3 : GRID_SIZE - 1;
+
+          for (let y = minCoord; y <= maxCoord; y++) {
+            for (let x = minCoord; x <= maxCoord; x++) {
+              if (!isCellOccupied(x, y, safeFrontRadius)) {
+                candidates.push({ x, y });
+              }
+            }
+          }
+          if (candidates.length === 0) return null;
+          return candidates[Math.floor(Math.random() * candidates.length)];
+        }
+
+        function spawnFoodOfType(typeDef) {
+          // Remove existing of same type first
+          foods = foods.filter(f => f.type.id !== typeDef.id);
+          const cell = findFreeCell(2, false);
+          if (!cell) return;
+          foods.push({
+            x: cell.x,
+            y: cell.y,
+            type: typeDef,
+            spawnTime: performance.now()
+          });
+        }
+
+        function syncDynamicObstacles(isInitial = false) {
+          // Base 2 obstacles + 1 additional obstacle for every 20 points scored (up to 22 max)
+          const targetCount = Math.min(22, 2 + Math.floor(score / 20));
+          let spawnedAny = false;
+
+          while (obstacles.length < targetCount) {
+            const cell = findFreeCell(4, true);
+            if (!cell) break;
+            obstacles.push({
+              x: cell.x,
+              y: cell.y,
+              spawnTime: performance.now()
+            });
+            spawnedAny = true;
+
+            if (!isInitial) {
+              createShockwave(cell.x, cell.y, '#94a3b8', 1.1);
+              createParticleBurst(cell.x, cell.y, '#64748b', 8, 1.5);
+            }
+          }
+
+          if (spawnedAny && !isInitial && gameState === 'PLAYING') {
+            sound.playObstacleSpawn();
+          }
+        }
+
+        // ==========================================
+        // 7. PARTICLE & VISUAL FX ENGINE
+        // ==========================================
+        function createParticleBurst(gridX, gridY, color, count = 18, speedScale = 1) {
+          const cx = (gridX + 0.5) * cellSize;
+          const cy = (gridY + 0.5) * cellSize;
+
+          for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+            const speed = (1.2 + Math.random() * 3.8) * speedScale * (cellSize / 24);
+            particles.push({
+              x: cx,
+              y: cy,
+              vx: Math.cos(angle) * speed,
+              vy: Math.sin(angle) * speed,
+              size: (2.5 + Math.random() * 3.5) * (cellSize / 24),
+              color: color,
+              alpha: 1,
+              decay: 0.022 + Math.random() * 0.02
+            });
+          }
+        }
+
+        function createShockwave(gridX, gridY, color, maxRadiusCells = 1.8) {
+          shockwaves.push({
+            x: (gridX + 0.5) * cellSize,
+            y: (gridY + 0.5) * cellSize,
+            radius: cellSize * 0.25,
+            maxRadius: cellSize * maxRadiusCells,
+            color: color,
+            alpha: 0.9
+          });
+        }
+
+        function createFloatingText(gridX, gridY, text, color) {
+          floatingTexts.push({
+            x: (gridX + 0.5) * cellSize,
+            y: (gridY + 0.2) * cellSize,
+            text: text,
+            color: color,
+            alpha: 1,
+            vy: -1.1 * (cellSize / 24)
+          });
+        }
+
+        function triggerCrashExplosion(crashX, crashY) {
+          screenShake = 12;
+          createShockwave(crashX, crashY, '#f43f5e', 3.2);
+          createParticleBurst(crashX, crashY, '#f43f5e', 34, 1.7);
+          createParticleBurst(crashX, crashY, '#fbbf24', 18, 1.3);
+
+          // Shatter snake segments into particles
+          snake.forEach((seg, idx) => {
+            if (idx % 2 === 0) {
+              createParticleBurst(seg.x, seg.y, '#34d399', 6, 0.9);
+            }
+          });
+        }
+
+        // ==========================================
+        // 8. GAMEPLAY TICK & COLLISION LOGIC
+        // ==========================================
+        function getCurrentTickInterval(now) {
+          const preset = PACE_PRESETS[selectedPace] || PACE_PRESETS.arcade;
+          // Slight natural speed progression as score increases
+          const progressionFactor = Math.max(0.72, 1 - Math.floor(score / 80) * 0.035);
+          let interval = preset.baseInterval * progressionFactor;
+
+          const isSlowMo = now < slowMoEndTime;
+          if (isBoosting) {
+            interval *= 0.52; // ~1.9x faster overdrive
+          } else if (isSlowMo) {
+            interval *= 1.52; // ~35% slower cryo speed
+          }
+          return interval;
+        }
+
+        function stepSimulation(now) {
+          prevSnake = snake.map(seg => ({ ...seg }));
+
+          if (inputQueue.length > 0) {
+            direction = inputQueue.shift();
+          }
+
+          // If Spacebar boost is held, consume 1 score point per boosted step (if score > 0)
+          if (isBoosting) {
+            sound.playBoostStep();
+            if (score > 0) {
+              score = Math.max(0, score - 1);
+              boostPointsBurned += 1;
+            }
+            // Emit thruster trail particle from tail
+            const tail = snake[snake.length - 1];
+            createParticleBurst(tail.x, tail.y, '#f59e0b', 4, 0.55);
+          }
+
+          const head = snake[0];
+          const nextX = head.x + direction.x;
+          const nextY = head.y + direction.y;
+
+          // 1. Check Arena Boundary Collision
+          if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) {
+            handleGameOver('Boundary Wall Impact', 'You collided with the outer perimeter wall.');
+            return;
+          }
+
+          // 2. Check Dynamic Obstacle Collision
+          for (let i = 0; i < obstacles.length; i++) {
+            if (obstacles[i].x === nextX && obstacles[i].y === nextY) {
+              handleGameOver('Obstacle Collision', 'You crashed into a dynamic grid barricade.');
+              return;
+            }
+          }
+
+          // 3. Check Self Collision (excluding tail tip if it's about to move forward)
+          const checkLimit = pendingGrowth > 0 ? snake.length : snake.length - 1;
+          for (let i = 0; i < checkLimit; i++) {
+            if (snake[i].x === nextX && snake[i].y === nextY) {
+              handleGameOver('Hull Self-Collision', 'Your snake intersected its own active trail.');
+              return;
+            }
+          }
+
+          // Advance Snake Head
+          snake.unshift({ x: nextX, y: nextY });
+          if (pendingGrowth > 0) {
+            pendingGrowth -= 1;
+          } else {
+            snake.pop();
+          }
+
+          // 4. Check Food Consumption
+          let ateIndex = -1;
+          for (let i = 0; i < foods.length; i++) {
+            if (foods[i].x === nextX && foods[i].y === nextY) {
+              ateIndex = i;
+              break;
+            }
+          }
+
+          if (ateIndex !== -1) {
+            const eaten = foods[ateIndex];
+            const fType = eaten.type;
+
+            score += fType.points;
+            foodsHarvested += 1;
+            pendingGrowth += fType.growth;
+            saveHighScore(score);
+
+            // Visual & Audio FX by food type
+            createShockwave(nextX, nextY, fType.bright, 2.1);
+            createParticleBurst(nextX, nextY, fType.bright, 24, 1.35);
+            createFloatingText(nextX, nextY, fType.label, fType.bright);
+
+            if (fType.id === 'NORMAL') {
+              sound.playEatNormal();
+            } else if (fType.id === 'GOLDEN') {
+              sound.playEatGolden();
+            } else if (fType.id === 'SLOW') {
+              slowMoEndTime = now + fType.slowDurationMs;
+              sound.playEatSlowMo();
+            }
+
+            // Respawn the eaten food type in a new free grid cell
+            spawnFoodOfType(fType);
+
+            // Check if score milestone unlocked new dynamic obstacles
+            syncDynamicObstacles(false);
+          }
+
+          updateHUD(now);
+        }
+
+        function handleGameOver(reasonTitle, reasonDesc) {
+          gameState = 'GAME_OVER';
+          isBoosting = false;
+          touchBoostBtn.classList.remove('active');
+          sound.playCrash();
+
+          const head = snake[0];
+          triggerCrashExplosion(head.x, head.y);
+          saveHighScore(score);
+          updateHUD();
+
+          gameOverReason.textContent = reasonTitle;
+          gameOverSubtext.textContent = reasonDesc;
+          finalScoreVal.textContent = String(score);
+          finalHighScoreVal.textContent = String(highScore);
+          finalFoodCount.textContent = String(foodsHarvested);
+          finalObstacleCount.textContent = String(obstacles.length);
+
+          gameOverOverlay.classList.remove('hidden');
+        }
+
+        function updateHUD(now = performance.now()) {
+          hudScore.textContent = String(score);
+          hudHighScore.textContent = String(highScore);
+          hudObstacles.textContent = String(obstacles.length);
+          startBestScore.textContent = String(highScore);
+
+          railLength.textContent = String(snake.length);
+          railBoostBurned.textContent = boostPointsBurned + ' pts';
+
+          const isSlowMo = now < slowMoEndTime && gameState === 'PLAYING';
+          if (isSlowMo) {
+            const remSec = Math.max(0, (slowMoEndTime - now) / 1000).toFixed(1);
+            railSlowTimer.textContent = remSec + 's active';
+            railSlowTimer.style.color = 'var(--accent-cyan)';
+          } else {
+            railSlowTimer.textContent = 'Inactive';
+            railSlowTimer.style.color = 'var(--text-primary)';
+          }
+
+          canvasFrame.classList.toggle('boost-active', isBoosting && gameState === 'PLAYING');
+          canvasFrame.classList.toggle('slow-active', isSlowMo && !isBoosting);
+
+          if (isBoosting && gameState === 'PLAYING') {
+            hudSpeedState.textContent = '1.85x Boost (-1 pt)';
+            hudSpeedState.className = 'hud-value highlight-gold';
+          } else if (isSlowMo) {
+            hudSpeedState.textContent = '0.65x Slow-Mo';
+            hudSpeedState.className = 'hud-value highlight-cyan';
+          } else {
+            const mult = (PACE_PRESETS[selectedPace] || PACE_PRESETS.arcade).multiplier.toFixed(1);
+            hudSpeedState.textContent = mult + 'x Normal';
+            hudSpeedState.className = 'hud-value highlight-emerald';
+          }
+        }
+
+        // ==========================================
+        // 9. RENDERING ENGINE (60FPS CANVAS)
+        // ==========================================
+        function drawArena(now) {
+          ctx.save();
+
+          // Apply subtle camera shake on crash
+          if (screenShake > 0.2) {
+            const dx = (Math.random() - 0.5) * screenShake;
+            const dy = (Math.random() - 0.5) * screenShake;
+            ctx.translate(dx, dy);
+            screenShake *= 0.86;
+          } else {
+            screenShake = 0;
+          }
+
+          // 1. Background Fill
+          ctx.fillStyle = '#0c121e';
+          ctx.fillRect(0, 0, canvasLogicalSize, canvasLogicalSize);
+
+          // 2. Subtle Precision Tactical Grid
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.055)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          for (let i = 1; i < GRID_SIZE; i++) {
+            const pos = i * cellSize;
+            ctx.moveTo(pos, 0);
+            ctx.lineTo(pos, canvasLogicalSize);
+            ctx.moveTo(0, pos);
+            ctx.lineTo(canvasLogicalSize, pos);
+          }
+          ctx.stroke();
+
+          // Subtle intersection dots every 4 cells
+          ctx.fillStyle = 'rgba(148, 163, 184, 0.16)';
+          for (let y = 4; y < GRID_SIZE; y += 4) {
+            for (let x = 4; x < GRID_SIZE; x += 4) {
+              ctx.fillRect(x * cellSize - 1, y * cellSize - 1, 2, 2);
+            }
+          }
+
+          // 3. Draw Dynamic Obstacles
+          for (let i = 0; i < obstacles.length; i++) {
+            const obs = obstacles[i];
+            const age = Math.max(0.08, Math.min(1, (now - obs.spawnTime) / 260));
+            const pad = 2;
+            const x = obs.x * cellSize + pad;
+            const y = obs.y * cellSize + pad;
+            const size = Math.max(2, (cellSize - pad * 2) * age);
+            const offset = ((cellSize - pad * 2) - size) * 0.5;
+
+            ctx.save();
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            roundRect(ctx, x + offset, y + offset, size, size, 5);
+            ctx.fill();
+            ctx.stroke();
+
+            // Inner beveled hazard detail
+            if (size > 10) {
+              ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(x + offset + 4, y + offset + size - 4);
+              ctx.lineTo(x + offset + size - 4, y + offset + 4);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          // 4. Draw Multi-Tier Foods
+          for (let i = 0; i < foods.length; i++) {
+            const f = foods[i];
+            const cx = (f.x + 0.5) * cellSize;
+            const cy = (f.y + 0.5) * cellSize;
+            const pulse = Math.sin(now * 0.006 + i * 1.7) * 0.12 + 1;
+
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            if (f.type.id === 'NORMAL') {
+              // Glowing Emerald Energy Node
+              ctx.shadowColor = '#10b981';
+              ctx.shadowBlur = 12;
+              ctx.fillStyle = '#34d399';
+              ctx.beginPath();
+              ctx.arc(0, 0, Math.max(1, cellSize * 0.31 * pulse), 0, Math.PI * 2);
+              ctx.fill();
+
+              ctx.fillStyle = '#ecfdf5';
+              ctx.beginPath();
+              ctx.arc(0, 0, Math.max(1, cellSize * 0.13), 0, Math.PI * 2);
+              ctx.fill();
+            } else if (f.type.id === 'GOLDEN') {
+              // Golden Apple (+30 pts) - Radiant rotating diamond/star emblem
+              ctx.shadowColor = '#f59e0b';
+              ctx.shadowBlur = 16;
+
+              // Outer halo ring
+              ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.arc(0, 0, Math.max(1, cellSize * 0.42 * pulse), 0, Math.PI * 2);
+              ctx.stroke();
+
+              ctx.rotate(now * 0.0025);
+              ctx.fillStyle = '#fbbf24';
+              const r = Math.max(1, cellSize * 0.32 * pulse);
+              ctx.beginPath();
+              ctx.moveTo(0, -r);
+              ctx.lineTo(r, 0);
+              ctx.lineTo(0, r);
+              ctx.lineTo(-r, 0);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.fillStyle = '#fef3c7';
+              ctx.beginPath();
+              ctx.arc(0, 0, Math.max(1, cellSize * 0.12), 0, Math.PI * 2);
+              ctx.fill();
+            } else if (f.type.id === 'SLOW') {
+              // Slow-Motion Berry - Cryo Hexagon with frost core
+              ctx.shadowColor = '#38bdf8';
+              ctx.shadowBlur = 14;
+              ctx.fillStyle = '#38bdf8';
+              const r = Math.max(1, cellSize * 0.33 * pulse);
+              ctx.beginPath();
+              for (let v = 0; v < 6; v++) {
+                const ang = (Math.PI / 3) * v - Math.PI / 6;
+                const vx = Math.cos(ang) * r;
+                const vy = Math.sin(ang) * r;
+                if (v === 0) ctx.moveTo(vx, vy);
+                else ctx.lineTo(vx, vy);
+              }
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.strokeStyle = '#e0f2fe';
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.arc(0, 0, Math.max(1, cellSize * 0.15), 0, Math.PI * 2);
+              ctx.stroke();
+            }
+
+            ctx.restore();
+          }
+
+          // 5. Draw Snake with Smooth Sub-Frame Interpolation
+          if (snake.length > 0) {
+            const progress = gameState === 'PLAYING'
+              ? Math.max(0, Math.min(1, (now - lastMoveTimestamp) / moveIntervalMs))
+              : 1;
+
+            const isSlowMo = now < slowMoEndTime && gameState === 'PLAYING';
+
+            for (let i = snake.length - 1; i >= 0; i--) {
+              const curr = snake[i];
+              const prev = prevSnake[i] || curr;
+              const ix = prev.x + (curr.x - prev.x) * progress;
+              const iy = prev.y + (curr.y - prev.y) * progress;
+
+              const isHead = i === 0;
+              const ratio = 1 - i / Math.max(1, snake.length + 2);
+              const pad = isHead ? 1.5 : 2.5 + (1 - ratio) * 2.5;
+              const x = ix * cellSize + pad;
+              const y = iy * cellSize + pad;
+              const size = Math.max(2, cellSize - pad * 2);
+
+              ctx.save();
+              if (isBoosting && gameState === 'PLAYING') {
+                ctx.fillStyle = isHead ? '#fef08a' : (i % 2 === 0 ? '#f59e0b' : '#fbbf24');
+                if (isHead) {
+                  ctx.shadowColor = '#f59e0b';
+                  ctx.shadowBlur = 16;
+                }
+              } else if (isSlowMo) {
+                ctx.fillStyle = isHead ? '#e0f2fe' : (i % 2 === 0 ? '#0284c7' : '#38bdf8');
+                if (isHead) {
+                  ctx.shadowColor = '#38bdf8';
+                  ctx.shadowBlur = 15;
+                }
+              } else {
+                ctx.fillStyle = isHead ? '#6ee7b7' : `rgba(16, 185, 129, ${0.45 + ratio * 0.55})`;
+                if (isHead) {
+                  ctx.shadowColor = '#10b981';
+                  ctx.shadowBlur = 14;
+                }
+              }
+
+              roundRect(ctx, x, y, size, size, isHead ? 7 : 5);
+              ctx.fill();
+
+              // Draw Directional Eyes on Head
+              if (isHead) {
+                const cx = (ix + 0.5) * cellSize;
+                const cy = (iy + 0.5) * cellSize;
+                const eyeOffsetFwd = cellSize * 0.16;
+                const eyeOffsetSide = cellSize * 0.17;
+                const perpX = -direction.y;
+                const perpY = direction.x;
+
+                ctx.fillStyle = '#080c14';
+                ctx.beginPath();
+                ctx.arc(
+                  cx + direction.x * eyeOffsetFwd + perpX * eyeOffsetSide,
+                  cy + direction.y * eyeOffsetFwd + perpY * eyeOffsetSide,
+                  Math.max(2, cellSize * 0.085),
+                  0,
+                  Math.PI * 2
+                );
+                ctx.arc(
+                  cx + direction.x * eyeOffsetFwd - perpX * eyeOffsetSide,
+                  cy + direction.y * eyeOffsetFwd - perpY * eyeOffsetSide,
+                  Math.max(2, cellSize * 0.085),
+                  0,
+                  Math.PI * 2
+                );
+                ctx.fill();
+              }
+
+              ctx.restore();
+            }
+          }
+
+          // 6. Update & Draw Shockwaves
+          for (let i = shockwaves.length - 1; i >= 0; i--) {
+            const sw = shockwaves[i];
+            sw.radius += (sw.maxRadius - sw.radius) * 0.16;
+            sw.alpha -= 0.042;
+            if (sw.alpha <= 0) {
+              shockwaves.splice(i, 1);
+              continue;
+            }
+            ctx.save();
+            ctx.strokeStyle = sw.color;
+            ctx.globalAlpha = Math.max(0, sw.alpha);
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(sw.x, sw.y, Math.max(0.5, sw.radius), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // 7. Update & Draw Particle Explosions
+          for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vx *= 0.96;
+            p.vy *= 0.96;
+            p.alpha -= p.decay;
+
+            if (p.alpha <= 0) {
+              particles.splice(i, 1);
+              continue;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.shadowColor = p.color;
+            ctx.shadowBlur = 8;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.alpha), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // 8. Update & Draw Floating Score Popups
+          for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            const ft = floatingTexts[i];
+            ft.y += ft.vy;
+            ft.alpha -= 0.024;
+            if (ft.alpha <= 0) {
+              floatingTexts.splice(i, 1);
+              continue;
+            }
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, ft.alpha);
+            ctx.font = `700 ${Math.max(11, Math.floor(cellSize * 0.52))}px "JetBrains Mono", monospace`;
+            ctx.fillStyle = ft.color;
+            ctx.textAlign = 'center';
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+          }
+
+          ctx.restore();
+        }
+
+        function roundRect(context, x, y, width, height, radius) {
+          const w = Math.max(0, width);
+          const h = Math.max(0, height);
+          const r = Math.max(0, Math.min(radius, w / 2, h / 2));
+          context.beginPath();
+          context.moveTo(x + r, y);
+          context.arcTo(x + w, y, x + w, y + h, r);
+          context.arcTo(x + w, y + h, x, y + h, r);
+          context.arcTo(x, y + h, x, y, r);
+          context.arcTo(x, y, x + w, y, r);
+          context.closePath();
+        }
+
+        // ==========================================
+        // 10. MAIN ANIMATION LOOP
+        // ==========================================
+        function gameLoop(now) {
+          if (gameState === 'PLAYING') {
+            moveIntervalMs = getCurrentTickInterval(now);
+            if (now - lastMoveTimestamp >= moveIntervalMs) {
+              lastMoveTimestamp = now;
+              stepSimulation(now);
+            } else if (now < slowMoEndTime) {
+              updateHUD(now);
+            }
+          }
+
+          drawArena(now);
+          requestAnimationFrame(gameLoop);
+        }
+
+        // ==========================================
+        // 11. INPUT HANDLERS & UI STATE FLOW
+        // ==========================================
+        function queueDirection(newDir) {
+          const lastScheduled = inputQueue.length > 0 ? inputQueue[inputQueue.length - 1] : direction;
+          // Prevent 180-degree self-reversal or duplicate direction
+          if (newDir.x === -lastScheduled.x && newDir.y === -lastScheduled.y) return;
+          if (newDir.x === lastScheduled.x && newDir.y === lastScheduled.y) return;
+          if (inputQueue.length < 2) {
+            inputQueue.push(newDir);
+          }
+        }
+
+        function startGame() {
+          sound.init();
+          initMatch();
+          gameState = 'PLAYING';
+          startOverlay.classList.add('hidden');
+          pauseOverlay.classList.add('hidden');
+          gameOverOverlay.classList.add('hidden');
+          pauseBtnText.textContent = 'Pause (P)';
+          sound.playEatNormal();
+        }
+
+        function togglePause() {
+          if (gameState === 'PLAYING') {
+            gameState = 'PAUSED';
+            isBoosting = false;
+            touchBoostBtn.classList.remove('active');
+            pauseCurrentScore.textContent = String(score);
+            pauseObstacles.textContent = String(obstacles.length);
+            pauseLength.textContent = String(snake.length);
+            pauseHighScore.textContent = String(highScore);
+            pauseOverlay.classList.remove('hidden');
+            pauseBtnText.textContent = 'Resume (P)';
+            sound.playPause(true);
+            updateHUD();
+          } else if (gameState === 'PAUSED') {
+            gameState = 'PLAYING';
+            lastMoveTimestamp = performance.now();
+            pauseOverlay.classList.add('hidden');
+            pauseBtnText.textContent = 'Pause (P)';
+            sound.playPause(false);
+            updateHUD();
+          }
+        }
+
+        window.addEventListener('keydown', (e) => {
+          const key = e.key;
+
+          if (key === 'p' || key === 'P' || key === 'Escape') {
+            if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+              e.preventDefault();
+              togglePause();
+            }
+            return;
+          }
+
+          if (key === 'Enter') {
+            if (gameState === 'TITLE_MENU' || gameState === 'GAME_OVER') {
+              e.preventDefault();
+              startGame();
+              return;
+            }
+          }
+
+          if (key === ' ' || e.code === 'Space') {
+            if (gameState === 'PLAYING') {
+              e.preventDefault();
+              if (!isBoosting) {
+                isBoosting = true;
+                updateHUD();
+              }
+            }
+            return;
+          }
+
+          if (gameState !== 'PLAYING') return;
+
+          switch (key) {
+            case 'ArrowUp':
+            case 'w':
+            case 'W':
+              e.preventDefault();
+              queueDirection({ x: 0, y: -1 });
+              break;
+            case 'ArrowDown':
+            case 's':
+            case 'S':
+              e.preventDefault();
+              queueDirection({ x: 0, y: 1 });
+              break;
+            case 'ArrowLeft':
+            case 'a':
+            case 'A':
+              e.preventDefault();
+              queueDirection({ x: -1, y: 0 });
+              break;
+            case 'ArrowRight':
+            case 'd':
+            case 'D':
+              e.preventDefault();
+              queueDirection({ x: 1, y: 0 });
+              break;
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          if (e.key === ' ' || e.code === 'Space') {
+            if (isBoosting) {
+              isBoosting = false;
+              updateHUD();
+            }
+          }
+        });
+
+        // Difficulty Segmented Buttons
+        document.querySelectorAll('.seg-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedPace = btn.getAttribute('data-speed') || 'arcade';
+            updateHUD();
+          });
+        });
+
+        // Primary UI Buttons
+        startGameBtn.addEventListener('click', startGame);
+        playAgainBtn.addEventListener('click', startGame);
+        resumeGameBtn.addEventListener('click', togglePause);
+        restartFromPauseBtn.addEventListener('click', startGame);
+        pauseBtn.addEventListener('click', () => {
+          if (gameState === 'PLAYING' || gameState === 'PAUSED') {
+            togglePause();
+          }
+        });
+
+        brandLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (gameState === 'PLAYING') {
+            togglePause();
+          }
+        });
+
+        audioToggleBtn.addEventListener('click', () => {
+          const isOn = sound.toggle();
+          audioLabel.textContent = isOn ? 'Audio: On' : 'Audio: Muted';
+        });
+
+        // Mobile / Touch D-Pad & Hold Boost
+        document.querySelectorAll('.touch-btn').forEach((btn) => {
+          const handleTurn = (e) => {
+            e.preventDefault();
+            if (gameState !== 'PLAYING') return;
+            const dir = btn.getAttribute('data-dir');
+            if (dir === 'UP') queueDirection({ x: 0, y: -1 });
+            if (dir === 'DOWN') queueDirection({ x: 0, y: 1 });
+            if (dir === 'LEFT') queueDirection({ x: -1, y: 0 });
+            if (dir === 'RIGHT') queueDirection({ x: 1, y: 0 });
+          };
+          btn.addEventListener('touchstart', handleTurn, { passive: false });
+          btn.addEventListener('mousedown', handleTurn);
+        });
+
+        const startTouchBoost = (e) => {
+          e.preventDefault();
+          if (gameState === 'PLAYING') {
+            isBoosting = true;
+            touchBoostBtn.classList.add('active');
+            updateHUD();
+          }
+        };
+
+        const endTouchBoost = (e) => {
+          e.preventDefault();
+          if (isBoosting) {
+            isBoosting = false;
+            touchBoostBtn.classList.remove('active');
+            updateHUD();
+          }
+        };
+
+        touchBoostBtn.addEventListener('touchstart', startTouchBoost, { passive: false });
+        touchBoostBtn.addEventListener('touchend', endTouchBoost, { passive: false });
+        touchBoostBtn.addEventListener('mousedown', startTouchBoost);
+        window.addEventListener('mouseup', () => {
+          if (isBoosting) {
+            isBoosting = false;
+            touchBoostBtn.classList.remove('active');
+            updateHUD();
+          }
+        });
+
+        // Boot Canvas & Initial Preview State
+        resizeCanvas();
+        initMatch();
+        requestAnimationFrame(gameLoop);
+      })();
+    </script>
+  </body>
+</html>
